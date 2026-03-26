@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ansible-mcp
+  namespace: ansible-mcp
+  labels:
+    app: ansible-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ansible-mcp
+  template:
+    metadata:
+      labels:
+        app: ansible-mcp
+    spec:
+      serviceAccountName: ansible-mcp-sa
+      containers:
+        - name: ansible-mcp
+          image: your-registry/ansible-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: ansible-mcp-config
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: ssh-keys
+              mountPath: /root/.ssh
+              readOnly: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /sse
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /sse
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: ansible-mcp-workspace
+        - name: ssh-keys
+          secret:
+            secretName: ansible-ssh-keys
+            defaultMode: 0400

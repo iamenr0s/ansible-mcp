@@ -1,0 +1,11 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ansible-mcp-sse-headers
+  namespace: ansible-mcp
+spec:
+  headers:
+    customResponseHeaders:
+      X-Accel-Buffering: "no"
+    customRequestHeaders:
+      Connection: "keep-alive"

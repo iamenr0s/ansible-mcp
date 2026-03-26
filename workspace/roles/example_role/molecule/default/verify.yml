@@ -1,0 +1,14 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Collect testinfra results
+      ansible.builtin.command: >
+        python3 -m pytest
+        /workspace/roles/example_role/molecule/default/tests/
+        --ansible-inventory={{ inventory_file }}
+        -v
+      delegate_to: localhost
+      changed_when: false

@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ansible-mcp
+
+commonLabels:
+  app.kubernetes.io/name: ansible-mcp
+  app.kubernetes.io/managed-by: argocd
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - pvc.yaml
+  - secret-store.yaml
+  - external-secret.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - middleware.yaml
+
+images:
+  - name: your-registry/ansible-mcp
+    newTag: latest

@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ansible-mcp
+  namespace: ansible-mcp
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: ansible-mcp-sse-headers@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: ansible-mcp.apps.k8s.enros.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ansible-mcp
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - ansible-mcp.apps.k8s.enros.me
+      secretName: ansible-mcp-tls

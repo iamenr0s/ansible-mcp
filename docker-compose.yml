@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  ansible-mcp:
+    build: .
+    container_name: ansible-mcp
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./workspace:/workspace
+      - ./ssh:/root/.ssh:ro
+    environment:
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8000"
+      WORKSPACE_DIR: "/workspace"
+      ANSIBLE_CONFIG: "/etc/ansible/ansible.cfg"
+    # Uncomment for libvirt/qemu/podman drivers:
+    # privileged: true
+    # devices:
+    #   - /dev/kvm:/dev/kvm
+    restart: unless-stopped

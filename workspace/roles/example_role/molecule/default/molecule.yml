@@ -1,0 +1,33 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: instance-ubi9
+    image: registry.access.redhat.com/ubi9/ubi-init:latest
+    pre_build_image: true
+    systemd: always
+    privileged: false
+    capabilities:
+      - SYS_ADMIN
+
+  - name: instance-debian12
+    image: geerlingguy/docker-debian12-ansible:latest
+    pre_build_image: true
+    systemd: always
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callbacks_enabled: profile_tasks
+
+verifier:
+  name: testinfra
+
+lint: |
+  set -e
+  ansible-lint

@@ -1,0 +1,10 @@
+mcp[cli]>=1.0.0
+uvicorn[standard]>=0.29.0
+starlette>=0.37.0
+ansible>=10.0.0
+molecule>=24.0.0
+molecule-libvirt>=0.5.0
+molecule-podman>=2.0.0
+molecule-qemu>=1.0.0
+testinfra>=10.1.0
+ansible-lint>=24.0.0

@@ -1,0 +1,29 @@
+# SSH keys — never commit these
+ssh/
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Ansible
+*.retry
+/workspace/ansible.log
+/tmp/ansible_facts_cache/
+
+# Molecule
+.molecule/
+
+# Docker
+.docker/
+
+# IDE
+.idea/
+.vscode/
+*.swp

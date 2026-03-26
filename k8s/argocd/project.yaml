@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ansible-mcp
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Ansible MCP Server project
+  sourceRepos:
+    - https://github.com/YOUR_ORG/ansible-mcp.git
+  destinations:
+    - namespace: ansible-mcp
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  roles:
+    - name: admin
+      policies:
+        - p, proj:ansible-mcp:admin, applications, *, ansible-mcp/*, allow
+      groups:
+        - ansible-mcp-admins

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ansible-mcp-config
+  namespace: ansible-mcp
+data:
+  MCP_HOST: "0.0.0.0"
+  MCP_PORT: "8000"
+  WORKSPACE_DIR: "/workspace"
+  ANSIBLE_CONFIG: "/etc/ansible/ansible.cfg"

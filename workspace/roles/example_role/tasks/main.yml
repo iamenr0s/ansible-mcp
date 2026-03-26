@@ -1,0 +1,13 @@
+---
+- name: Ensure required packages are installed
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ example_role_packages }}"
+
+- name: Ensure service is started and enabled
+  ansible.builtin.service:
+    name: "{{ example_role_service }}"
+    state: started
+    enabled: true
+  notify: Restart service

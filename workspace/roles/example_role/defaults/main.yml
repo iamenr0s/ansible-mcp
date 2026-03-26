@@ -1,0 +1,6 @@
+---
+example_role_packages:
+  - curl
+  - git
+
+example_role_service: cron
