@@ -27,3 +27,13 @@ venv/
 .idea/
 .vscode/
 *.swp
+
+# Claude Code
+.claude/
+
+# Local task tracking
+tasks/
+
+# Environment files
+.env
+.env.*
