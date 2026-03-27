@@ -16,10 +16,17 @@ spec:
         app: ansible-mcp
     spec:
       serviceAccountName: ansible-mcp-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: ansible-mcp
           image: your-registry/ansible-mcp:latest
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8000
           envFrom:
@@ -29,7 +36,7 @@ spec:
             - name: workspace
               mountPath: /workspace
             - name: ssh-keys
-              mountPath: /root/.ssh
+              mountPath: /home/ansible/.ssh
               readOnly: true
           resources:
             requests:
@@ -39,14 +46,12 @@ spec:
               cpu: "1000m"
               memory: "1Gi"
           livenessProbe:
-            httpGet:
-              path: /sse
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 30
           readinessProbe:
-            httpGet:
-              path: /sse
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10

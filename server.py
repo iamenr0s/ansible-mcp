@@ -30,10 +30,21 @@ def run_cmd(cmd: list[str], cwd: Optional[str] = None, timeout: int = 300) -> di
             capture_output=True, text=True, timeout=timeout,
         )
         return {"stdout": r.stdout, "stderr": r.stderr, "returncode": r.returncode}
-    except subprocess.TimeoutExpired:
-        return {"stdout": "", "stderr": f"Timed out after {timeout}s", "returncode": -1}
+    except subprocess.TimeoutExpired as e:
+        return {
+            "stdout": e.stdout or "",
+            "stderr": f"Timed out after {timeout}s\n{e.stderr or ''}".strip(),
+            "returncode": -1,
+        }
     except Exception as e:
         return {"stdout": "", "stderr": str(e), "returncode": -1}
+
+
+def safe_path(base: Path, user_input: str) -> Path:
+    """Resolve a user-supplied path and assert it stays within base. Raises ValueError on escape."""
+    resolved = (base / user_input).resolve()
+    resolved.relative_to(base.resolve())  # raises ValueError if outside base
+    return resolved
 
 
 def fmt(r: dict) -> str:
@@ -124,7 +135,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 async def _run_playbook(a: dict) -> list[TextContent]:
-    cmd = ["ansible-playbook", a["playbook"]]
+    try:
+        playbook = safe_path(WORKSPACE, a["playbook"])
+    except ValueError:
+        return [TextContent(type="text", text="Error: playbook path outside workspace")]
+    cmd = ["ansible-playbook", str(playbook)]
     if a.get("inventory"):  cmd += ["-i", a["inventory"]]
     if a.get("extra_vars"): cmd += ["--extra-vars", a["extra_vars"]]
     if a.get("tags"):       cmd += ["--tags", a["tags"]]
@@ -135,7 +150,13 @@ async def _run_playbook(a: dict) -> list[TextContent]:
 async def _run_molecule(a: dict) -> list[TextContent]:
     cmd = ["molecule", a.get("action", "test"), "-s", a.get("scenario", "default")]
     if a.get("driver"): cmd += ["--driver-name", a["driver"]]
-    cwd = str(WORKSPACE / a["role_path"]) if a.get("role_path") else str(WORKSPACE)
+    if a.get("role_path"):
+        try:
+            cwd = str(safe_path(WORKSPACE, a["role_path"]))
+        except ValueError:
+            return [TextContent(type="text", text="Error: role_path outside workspace")]
+    else:
+        cwd = str(WORKSPACE)
     return [TextContent(type="text", text=fmt(run_cmd(cmd, cwd=cwd, timeout=600)))]
 
 
@@ -149,7 +170,10 @@ async def _manage_inventory(a: dict) -> list[TextContent]:
     fname = a.get("filename")
     if not fname:
         return [TextContent(type="text", text="Error: 'filename' required.")]
-    path = inv_dir / fname
+    try:
+        path = safe_path(inv_dir, fname)
+    except ValueError:
+        return [TextContent(type="text", text="Error: filename outside inventory directory")]
     if action == "read":
         return [TextContent(type="text", text=path.read_text() if path.exists() else f"Not found: {fname}")]
     if action == "write":
@@ -171,7 +195,13 @@ async def _check_versions(a: dict) -> list[TextContent]:
 
 
 async def _run_shell(a: dict) -> list[TextContent]:
-    cwd = str(WORKSPACE / a["cwd"]) if a.get("cwd") else str(WORKSPACE)
+    if a.get("cwd"):
+        try:
+            cwd = str(safe_path(WORKSPACE, a["cwd"]))
+        except ValueError:
+            return [TextContent(type="text", text="Error: cwd outside workspace")]
+    else:
+        cwd = str(WORKSPACE)
     r   = run_cmd(["bash", "-c", a["command"]], cwd=cwd, timeout=a.get("timeout", 60))
     return [TextContent(type="text", text=fmt(r))]
 

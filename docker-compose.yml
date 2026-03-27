@@ -8,7 +8,7 @@ services:
       - "8000:8000"
     volumes:
       - ./workspace:/workspace
-      - ./ssh:/root/.ssh:ro
+      - ./ssh:/home/ansible/.ssh:ro
     environment:
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "8000"

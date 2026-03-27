@@ -47,6 +47,5 @@ jobs:
         run: molecule test -s default
         working-directory: workspace/roles/example_role
         env:
-          MOLECULE_DRIVER: podman
           PY_COLORS: "1"
           ANSIBLE_FORCE_COLOR: "1"
