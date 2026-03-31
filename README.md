@@ -1,10 +1,11 @@
 # ansible-mcp
 
-> An MCP (Model Context Protocol) server that gives Claude AI direct access to your Ansible environment — run playbooks, execute Molecule tests, manage inventory, and drop into a shell, all from a conversation.
+> An MCP (Model Context Protocol) server that gives Claude AI direct access to your Ansible environment — run playbooks, manage inventory, diagnose hosts, audit security, manage vault secrets, and much more, all from a conversation.
 
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Ansible](https://img.shields.io/badge/ansible-10%2B-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Tools](https://img.shields.io/badge/tools-42-brightgreen)
 
 ---
 
@@ -13,6 +14,16 @@
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Tools](#tools)
+  - [Legacy / Backwards-Compat](#legacy--backwards-compat)
+  - [Inventory](#inventory)
+  - [Playbook Execution](#playbook-execution)
+  - [Playbook Authoring](#playbook-authoring)
+  - [Testing](#testing)
+  - [Project Management](#project-management)
+  - [Vault](#vault)
+  - [Galaxy](#galaxy)
+  - [Diagnostics](#diagnostics)
+  - [Security & Analysis](#security--analysis)
 - [Prerequisites](#prerequisites)
 - [Quick start (Docker Compose)](#quick-start-docker-compose)
 - [Project structure](#project-structure)
@@ -20,6 +31,7 @@
   - [Environment variables](#environment-variables)
   - [ansible.cfg](#ansiblecfg)
   - [SSH keys](#ssh-keys)
+- [Project management](#project-management-1)
 - [Kubernetes deployment](#kubernetes-deployment)
   - [Prerequisites](#kubernetes-prerequisites)
   - [Secrets — HashiCorp Vault + ESO](#secrets--hashicorp-vault--eso)
@@ -41,7 +53,7 @@
 
 ## Overview
 
-This project implements an HTTP/SSE MCP server that wraps the Ansible ecosystem inside a Docker container and exposes it as a set of tools Claude can call mid-conversation.
+This project implements an HTTP/SSE MCP server that wraps the Ansible ecosystem inside a Docker container and exposes it as 42 tools Claude can call mid-conversation.
 
 Instead of:
 ```
@@ -54,9 +66,14 @@ you → "run the webservers playbook in check mode against staging"
 Claude → runs it, shows you the diff
 you → "looks good, run it for real"
 Claude → done
+
+you → "diagnose high memory on the db servers"
+Claude → gathers facts, runs health checks, identifies the process, suggests fix
+you → "auto-heal it"
+Claude → safely restarts the offending service
 ```
 
-Claude handles the flags, reads the output, spots failures, and can suggest fixes — all within the same conversation.
+Claude handles flags, reads output, spots failures, and can suggest or apply fixes — all within the same conversation.
 
 ---
 
@@ -66,7 +83,7 @@ Claude handles the flags, reads the output, spots failures, and can suggest fixe
 Claude.ai (MCP client)
     │  HTTPS / SSE
     ▼
-Traefik ingress  ←── TLS termination, buffering disabled
+Traefik ingress  ←── TLS termination, X-Accel-Buffering: no (required for SSE)
     │  HTTP/1.1
     ▼
 ┌─────────────────────────────────────────┐
@@ -78,6 +95,7 @@ Traefik ingress  ←── TLS termination, buffering disabled
 │  └──────────┬───────────────────────┘   │
 │             │ subprocess                │
 │   ansible-playbook  molecule  bash      │
+│   ansible-vault  ansible-galaxy         │
 └─────────────┼───────────────────────────┘
               │ SSH / WinRM
     Managed nodes / infrastructure
@@ -98,13 +116,101 @@ ArgoCD  ──── Kustomize overlays ──── Kubernetes
 
 ## Tools
 
+42 tools across 10 categories.
+
+### Legacy / Backwards-Compat
+
 | Tool | Description |
 |------|-------------|
-| `run_playbook` | Runs `ansible-playbook` with optional inventory, extra-vars, tags, and check mode |
+| `run_playbook` | Runs `ansible-playbook` (simple interface; prefer `ansible_playbook` for new use) |
 | `run_molecule` | Runs `molecule test/converge/verify/destroy/create/lint` against a role |
-| `manage_inventory` | Read, write, list, or delete inventory files under `/workspace/inventory/` |
+| `manage_inventory` | Read, write, list, or delete inventory files under `workspace/inventory/` |
 | `check_versions` | Shows installed versions of all managed packages via `pip show` |
 | `run_shell` | Runs arbitrary bash commands inside the container workspace |
+
+### Inventory
+
+| Tool | Description |
+|------|-------------|
+| `ansible_inventory` | Lists all hosts and groups as structured JSON |
+| `inventory_graph` | Shows the hierarchical group structure of an inventory |
+| `inventory_find_host` | Finds a host's group memberships and merged variables |
+| `inventory_diff` | Compares two inventory files — added/removed hosts and groups |
+| `inventory_parse` | Parses with `ansible.cfg`-aware environment and returns structured data |
+
+### Playbook Execution
+
+| Tool | Description |
+|------|-------------|
+| `ansible_playbook` | Full-featured playbook runner (verbosity, limit, diff, skip_tags, extra_vars as JSON) |
+| `ansible_task` | Ad-hoc module execution against hosts (ping, shell, setup, copy, etc.) |
+| `ansible_role` | Executes a role via a generated temporary playbook |
+| `validate_playbook` | Syntax-checks a playbook without executing it |
+
+### Playbook Authoring
+
+| Tool | Description |
+|------|-------------|
+| `create_playbook` | Writes a new YAML playbook to the workspace and validates its syntax |
+| `validate_yaml` | Validates any YAML file, reporting line/column errors |
+
+### Testing
+
+| Tool | Description |
+|------|-------------|
+| `ansible_test_idempotence` | Runs a playbook twice and verifies zero changes on the second run |
+
+### Project Management
+
+Register named projects with their own inventory, roles path, collections path, and custom environment variables. All playbook tools accept a `project` parameter that automatically applies the project's settings.
+
+| Tool | Description |
+|------|-------------|
+| `register_project` | Registers a project with inventory, roles, env vars, and optional default flag |
+| `list_projects` | Lists all registered projects and the current default |
+| `project_playbooks` | Discovers YAML playbook files within a project root |
+| `project_run_playbook` | Runs a playbook using the project's stored configuration |
+| `project_bootstrap` | Installs Galaxy dependencies and reports the Ansible environment |
+
+### Vault
+
+| Tool | Description |
+|------|-------------|
+| `vault_encrypt` | Encrypts a file with `ansible-vault` |
+| `vault_decrypt` | Decrypts a vault-encrypted file |
+| `vault_view` | Views encrypted file contents without decrypting to disk |
+| `vault_rekey` | Changes the encryption password on a vault file |
+
+### Galaxy
+
+| Tool | Description |
+|------|-------------|
+| `galaxy_install` | Installs roles and collections from a `requirements.yml` |
+| `galaxy_lock` | Captures installed versions to a lock file |
+
+### Diagnostics
+
+| Tool | Description |
+|------|-------------|
+| `ansible_gather_facts` | Collects system facts via the setup module |
+| `ansible_ping` | Tests Ansible connectivity using the ping module |
+| `ansible_remote_command` | Executes a shell command on remote hosts |
+| `ansible_fetch_logs` | Fetches and analyses remote log files with optional pattern filtering |
+| `ansible_service_manager` | Manages systemd services (start/stop/restart/status/enable/disable) |
+| `ansible_diagnose_host` | Comprehensive health assessment (CPU, memory, disk, load, network, failed services) |
+| `ansible_health_monitor` | Collects metrics at intervals and reports trends |
+
+### Security & Analysis
+
+| Tool | Description |
+|------|-------------|
+| `ansible_performance_baseline` | Benchmarks CPU, memory, and disk I/O |
+| `ansible_capture_baseline` | Snapshots processes, network listeners, and system state to a file |
+| `ansible_compare_states` | Diffs current state against a baseline snapshot to detect drift |
+| `ansible_auto_heal` | Diagnoses and optionally fixes: `high_cpu`, `high_memory`, `disk_full`, `service_failed`, `network_unreachable` |
+| `ansible_network_matrix` | Tests port connectivity across hosts and builds a connectivity matrix |
+| `ansible_security_audit` | Audits open ports, SSH config, world-writable files, failed logins, SUID files |
+| `ansible_log_hunter` | Searches multiple log files for a pattern and correlates events by time window |
 
 ---
 
@@ -130,13 +236,6 @@ ArgoCD  ──── Kustomize overlays ──── Kubernetes
 ```bash
 git clone https://github.com/YOUR_ORG/ansible-mcp.git
 cd ansible-mcp
-```
-
-Or generate the full project from scratch using the scaffold script:
-
-```bash
-bash scaffold-ansible-mcp.sh my-ansible-mcp
-cd my-ansible-mcp
 ```
 
 ### 2. Add your SSH key
@@ -182,18 +281,19 @@ Go to **Claude.ai → Settings → Integrations → Add integration** and enter:
 http://<YOUR_HOST_IP>:8000/sse
 ```
 
+Claude auto-discovers all 42 tools.
+
 ---
 
 ## Project structure
 
 ```
 ansible-mcp/
-├── server.py                          # MCP server (Starlette + SSE)
-├── requirements.txt                   # Python dependencies
+├── server.py                          # MCP server — 42 tools (Starlette + SSE)
+├── requirements.txt                   # Python dependencies (incl. PyYAML)
 ├── ansible.cfg                        # Ansible configuration
 ├── Dockerfile
 ├── docker-compose.yml
-├── scaffold-ansible-mcp.sh            # One-command project scaffolder
 ├── .github/
 │   ├── dependabot.yaml
 │   └── workflows/
@@ -214,7 +314,7 @@ ansible-mcp/
 │       │   ├── deployment.yaml
 │       │   ├── service.yaml
 │       │   ├── ingress.yaml           # Traefik + Let's Encrypt
-│       │   └── middleware.yaml        # Traefik SSE middleware
+│       │   └── middleware.yaml        # Traefik SSE middleware (X-Accel-Buffering: no)
 │       └── overlays/
 │           ├── dev/
 │           │   ├── kustomization.yaml
@@ -222,9 +322,10 @@ ansible-mcp/
 │           └── prod/
 │               ├── kustomization.yaml
 │               └── patch-resources.yaml
-└── workspace/
+└── workspace/                         # Volume-mounted persistent storage
     ├── inventory/
     │   └── hosts.ini
+    ├── projects.json                  # Auto-created: registered project configs
     └── roles/
         └── example_role/
             ├── tasks/main.yml
@@ -279,6 +380,22 @@ volumes:
 ```
 
 **Kubernetes** — SSH keys are pulled from HashiCorp Vault by the External Secrets Operator (see [Secrets](#secrets--hashicorp-vault--eso)). No manual `kubectl create secret` required.
+
+---
+
+## Project management
+
+Register named Ansible projects so tools automatically use the right inventory and environment:
+
+```
+you → "register the production project at infra/ with inventory infra/inventory/prod.ini"
+Claude → calls register_project
+
+you → "run the database playbook against the production project"
+Claude → calls project_run_playbook with project=production
+```
+
+Projects are stored in `workspace/projects.json` and survive container restarts via the volume mount. All playbook, inventory, diagnostics, vault, and galaxy tools accept a `project` parameter.
 
 ---
 
@@ -499,8 +616,6 @@ Automated dependency updates run every Monday at 08:00 UTC across three ecosyste
 | pip | `mcp-server` | mcp, uvicorn, starlette |
 | Docker | — | `python:3.12-slim` base image |
 
-Ansible and Molecule are grouped together so breaking changes are caught by a single Molecule CI run before merging.
-
 ---
 
 ## Connecting to Claude.ai
@@ -509,7 +624,7 @@ Ansible and Molecule are grouped together so breaking changes are caught by a si
 2. Enter the SSE URL:
    - **Docker Compose:** `http://<YOUR_HOST_IP>:8000/sse`
    - **Kubernetes:** `https://ansible-mcp.apps.k8s.enros.me/sse`
-3. Claude auto-discovers all five tools
+3. Claude auto-discovers all 42 tools
 
 ---
 
@@ -580,6 +695,8 @@ RUN apt-get install -y --no-install-recommends \
 | Molecule times out in K8s | Increase `resources.limits` in the overlay patch and molecule `timeout` in `molecule.yml` |
 | ArgoCD sync stuck | Run `argocd app get ansible-mcp` for error details; force with `argocd app sync --force` |
 | ArgoCD can't pull repo | Run `argocd repo add` with valid credentials before applying the Application manifest |
+| `validate_yaml` import error | Ensure `PyYAML>=6.0.0` is in `requirements.txt` and the image is rebuilt |
+| `ansible_health_monitor` times out | Reduce `samples` or `interval`; default is 3 samples × 10s = 30s total |
 
 ---
 

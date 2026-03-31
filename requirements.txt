@@ -8,3 +8,4 @@ molecule-podman>=2.0.0
 molecule-qemu>=1.0.0
 testinfra>=10.1.0
 ansible-lint>=24.0.0
+PyYAML>=6.0.0
