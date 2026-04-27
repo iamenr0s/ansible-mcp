@@ -1,5 +1,5 @@
-mcp[cli]>=1.26.0
-uvicorn[standard]>=0.42.0
+mcp[cli]>=1.27.0
+uvicorn[standard]>=0.46.0
 starlette>=1.0.0
 ansible>=13.5.0
 molecule>=26.3.0
