@@ -1,11 +1,11 @@
 mcp[cli]>=1.26.0
 uvicorn[standard]>=0.42.0
 starlette>=1.0.0
-ansible>=13.5.0
-molecule>=26.3.0
+ansible>=13.6.0
+molecule>=26.4.0
 molecule-libvirt>=0.0.6
 molecule-podman>=2.0.3
 molecule-qemu>=0.5.12
 testinfra>=6.0.0
-ansible-lint>=26.3.0
+ansible-lint>=26.4.0
 PyYAML>=6.0.3
